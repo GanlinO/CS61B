@@ -106,9 +106,138 @@ public class Model extends Observable {
      *    value, then the leading two tiles in the direction of motion merge,
      *    and the trailing tile does not.
      * */
+
+
+    public boolean columnUp(int col){
+        Tile[] oldCol = new Tile[4];
+        boolean ifMoved = false;
+        for (int i = 0; i <= 3; i++){
+            oldCol[i] = board.tile(col, i);
+        }
+
+        int[] mergedInf = new int[2];
+        int merged = 0;
+        int mergePos = -1;
+        mergedInf = moveTileUp(col, 2, merged, mergePos);
+        merged = mergedInf[0];
+        mergePos = mergedInf[1];
+
+        mergedInf = moveTileUp(col, 1, merged, mergePos);
+        merged = mergedInf[0];
+        mergePos = mergedInf[1];
+
+        mergedInf = moveTileUp(col, 0, merged, mergePos);
+        merged = mergedInf[0];
+        mergePos = mergedInf[1];
+
+        for (int j = 0; j <= 3; j++){
+            if (oldCol[j] != board.tile(col, j)){
+                ifMoved = true;
+            }
+        }
+
+        return ifMoved;
+    }
+
+    // return true if there is a merge
+    public int[] moveTileUp(int col, int row, int ifMerged, int mergePos) {
+        int ifMergedThisMove = ifMerged;
+        int mergePosition = mergePos;
+
+        Tile t = board.tile(col, row);
+        Tile tileAtRow3 = board.tile(col, 3);
+        Tile tileAtRow2 = board.tile(col, 2);
+        Tile tileAtRow1 = board.tile(col, 1);
+        Tile tileAtRow0 = board.tile(col, 0);
+
+        if (t != null) {
+
+            if (row == 2) {
+
+                if (tileAtRow3 == null) {
+                    board.move(col, 3, t);
+                } else if (tileAtRow3.value() == t.value()) {
+                    board.move(col, 3, t);
+                    score += 2 * t.value();
+                    ifMergedThisMove = 1;
+                    mergePosition = 3;
+                }
+
+            } else if (row == 1) {
+
+                if (tileAtRow2 == null) {
+
+                    if (tileAtRow3 == null) {
+                        board.move(col, 3, t);
+                    } else if (tileAtRow3.value() == t.value() && ifMergedThisMove == 0) {
+                        board.move(col, 3, t);
+                        score += 2 * t.value();
+                        ifMergedThisMove = 1;
+                        mergePosition = 3;
+                    } else {
+                        board.move(col, 2, t);
+                    }
+                } else if (tileAtRow2.value() == t.value() && ifMergedThisMove == 0) {
+                    board.move(col, 2, t);
+                    score += 2 * t.value();
+                    ifMergedThisMove = 1;
+                    mergePosition = 2;
+                }
+
+            } else if (row == 0) {
+                if (tileAtRow1 == null) {
+
+                    if (tileAtRow2 == null) {
+
+                        if (tileAtRow3 == null) {
+                            board.move(col, 3, t);
+                        } else if (tileAtRow3.value() == t.value() && ifMergedThisMove == 0) {
+                            board.move(col, 3, t);
+                            score += 2 * t.value();
+                            ifMergedThisMove = 1;
+                            mergePosition = 3;
+                        } else {
+                            board.move(col, 2, t);
+                        }
+
+                    } else if ((tileAtRow2.value() == t.value() && ifMergedThisMove == 0) || (tileAtRow2.value() == t.value() && mergePos == 3)) {
+                        board.move(col, 2, t);
+                        score += 2 * t.value();
+                        ifMergedThisMove = 1;
+                        mergePosition = 2;
+                    } else {
+                        board.move(col, 1, t);
+                    }
+                } else if (tileAtRow1.value() == t.value()) {
+                    board.move(col, 1, t);
+                    score += 2 * t.value();
+                    ifMergedThisMove = 1;
+                    mergePosition = 1;
+                }
+            }
+
+        }
+
+        int[] mergeInf = new int[2];
+        mergeInf[1] = mergePosition;
+        mergeInf[0] = ifMergedThisMove;
+        return mergeInf;
+
+    }
+
     public boolean tilt(Side side) {
         boolean changed;
         changed = false;
+
+        board.setViewingPerspective(side);
+
+        for (int i = 0; i <= 3; i++) {
+                if (columnUp(i)){
+                    changed = true;
+                };
+            }
+
+        board.setViewingPerspective(Side.NORTH);
 
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
@@ -137,7 +266,14 @@ public class Model extends Observable {
      *  Empty spaces are stored as null.
      * */
     public static boolean emptySpaceExists(Board b) {
-        // TODO: Fill in this function.
+        int size = b.size();
+        for (int col = 0; col < size; col++){
+            for (int row = 0; row < size; row++){
+                if (b.tile(col, row) == null){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -147,7 +283,16 @@ public class Model extends Observable {
      * given a Tile object t, we get its value with t.value().
      */
     public static boolean maxTileExists(Board b) {
-        // TODO: Fill in this function.
+        int MAX_PIECE = 2048;
+        int size = b.size();
+        for (int col = 0; col < size; col++){
+            for (int row = 0; row < size; row++){
+                Tile tile = b.tile(col, row);
+                if (tile != null && tile.value() == MAX_PIECE){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -158,7 +303,29 @@ public class Model extends Observable {
      * 2. There are two adjacent tiles with the same value.
      */
     public static boolean atLeastOneMoveExists(Board b) {
-        // TODO: Fill in this function.
+        if (Model.emptySpaceExists(b))
+            return true;
+
+        int size = b.size();
+        for (int col = 0; col < size; col++){
+            for (int row = 0; row < size; row++){
+                Tile tile = b.tile(col, row);
+                if (row == 0 && col != 0) {
+                    if (tile.value() == b.tile(col - 1, row).value()) {
+                        return true;
+                    }
+                } else if (row != 0 && col == 0) {
+                    if (tile.value() == b.tile(col, row - 1).value()) {
+                        return true;
+                    }
+                } else if (row != 0 && col != 0){
+                    if (tile.value() == b.tile(col - 1, row).value() || tile.value() == b.tile(col, row - 1).value()){
+                        return true;
+                    }
+                }
+            }
+
+        }
         return false;
     }
 
